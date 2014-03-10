@@ -17,18 +17,18 @@ var client = function(client_sec_key_base64,
   var socket;
   var protocol_state;
 
-  function unwrap_client_sec_key() {
-    var key_enc = lib.base64_to_bitarray(client_sec_key_base64);
-    var salt = lib.bitarray_slice(key_enc, 0, 128);
-    var key_enc_main = lib.bitarray_slice(key_enc, 128);
-      var sk_der = lib.bitarray_slice(lib.KDF(client_sec_key_password,salt),
-                                      0,
-                                      128);
-    var sk_cipher = lib.setup_cipher(sk_der);
-    var pair_sec_bits = lib.dec_gcm(sk_cipher, key_enc_main);
-    var pair_sec = sjcl.bn.fromBits(pair_sec_bits);
-    return new sjcl.ecc['ecdsa'].secretKey(curve, pair_sec);
-  }
+    function unwrap_client_sec_key() {
+        var key_enc = lib.base64_to_bitarray(client_sec_key_base64);
+        var salt = lib.bitarray_slice(key_enc, 0, 128);
+        var key_enc_main = lib.bitarray_slice(key_enc, 128);
+        var sk_der = lib.bitarray_slice(lib.KDF(client_sec_key_password,salt),
+                                        0,
+                                        128);
+        var sk_cipher = lib.setup_cipher(sk_der);
+        var pair_sec_bits = lib.dec_gcm(sk_cipher, key_enc_main);
+        var pair_sec = sjcl.bn.fromBits(pair_sec_bits);
+        return new sjcl.ecc['ecdsa'].secretKey(curve, pair_sec);
+    }
 
   function protocol_abort() {
     client_log('protocol error');
