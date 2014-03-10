@@ -24,17 +24,19 @@ var server = function(server_key,
   var socket = null;
   var protocol_state;
     
-  var random_bits = null;
+  var key_random_bits = null;
+  var message_random_bits = null;
     
   function get_random_bits () {
-      // TODO: Fix this. Not at all random as of now.
-      if (random_bits == null) {
+      // TODO: See if this needs to be proved.
+      if (key_random_bits == null) {
           // 256 bits to be used as HMAC key.
-          random_bits = random_bitarray (256);
+          key_random_bits = random_bitarray (256);
+          message_random_bits = random_bitarray (256);
       }
-      random_bits = HMAC (random_bits,
-                          string_to_bitarray ("Random generator"));
-      return random_bits;
+      message_random_bits = HMAC (key_random_bits,
+                                  message_random_bits);
+      return message_random_bits;
   }
 
   function unwrap_client_pub_key() {
