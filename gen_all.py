@@ -58,7 +58,10 @@ SCRIPT_DIR = os.path.realpath(os.path.dirname(sys.argv[0]))
 
 os.chdir(SCRIPT_DIR)
 
-p = subprocess.Popen(['node', './gen_client_keys.js'], stdin=subprocess.PIPE, stdout=subprocess.PIPE)
+try :
+    p = subprocess.Popen(['node', './gen_client_keys.js'], stdin=subprocess.PIPE, stdout=subprocess.PIPE)
+except :
+    p = subprocess.Popen(['nodejs', './gen_client_keys.js'], stdin=subprocess.PIPE, stdout=subprocess.PIPE)
 p.stdin.write(CLIENT_KEY_PASSWORD)
 p.stdin.write('\n')
 client_keys = json.load(p.stdout)

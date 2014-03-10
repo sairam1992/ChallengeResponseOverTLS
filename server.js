@@ -1,18 +1,41 @@
 var lib = require('./lib');
 var sjcl = require('./sjcl');
 
+var HMAC = lib.HMAC;
+var string_to_bitarray = lib.string_to_bitarray;
+var bitarray_to_hex = lib.bitarray_to_hex;
+var hex_to_bitarray = lib.hex_to_bitarray;
+var random_bitarray = lib.random_bitarray;
+
+var ECDSA_verify = lib.ECDSA_verify;
+
 var tls = require('tls');
+
 
 var server = function(server_key,
                       server_key_password,
                       server_cert,
                       client_pub_key_base64) {
   var server_log = lib.log_with_prefix('server');
+  var print = console.log;
   var TYPE = lib.TYPE;
 
   var tls_server;
   var socket = null;
   var protocol_state;
+    
+  var random_bits = null;
+    
+  function get_random_bits () {
+      // TODO: Fix this. Not at all random as of now.
+      if (random_bits == null) {
+          // 256 bits to be used as HMAC key.
+          random_bits = random_bitarray (256);
+      }
+      random_bits = HMAC (random_bits,
+                          string_to_bitarray ("Random generator"));
+      return random_bits;
+  }
 
   function unwrap_client_pub_key() {
     var pair_pub_pt = sjcl.ecc.curves['c256'].fromBits(
@@ -30,8 +53,7 @@ var server = function(server_key,
   var client_pub_key = unwrap_client_pub_key();
 
   function get_new_challenge() {
-    // TODO: generate challenge
-    return 'what is your favorite color?';
+    return bitarray_to_hex (get_random_bits ());
   }
 
   function process_client_msg(json_data) {
@@ -51,9 +73,17 @@ var server = function(server_key,
         }
 
         protocol_state = 'ABORT';
+
         var response_correct = false;
-        // TODO: check challenge response
-        response_correct = true;
+        try {
+            ECDSA_verify (client_pub_key,
+                          hex_to_bitarray (socket.challenge),
+                          hex_to_bitarray (data.message));
+            response_correct = true;
+        } catch (x) {
+            response_correct = false;
+        }
+
         if (response_correct) {
             server_log('authentication succeeded');
             lib.send_message(socket, TYPE['SUCCESS'], '');
@@ -104,6 +134,7 @@ var server = function(server_key,
 
     var challenge = get_new_challenge(); 
     server_log('generated challenge: ' + challenge);
+    socket.challenge = challenge;
 
     protocol_state = 'CHALLENGE';
     lib.send_message(socket, TYPE['CHALLENGE'], challenge);
@@ -114,10 +145,9 @@ var server = function(server_key,
 
   server.start = function(port) {
     var server_options = {
-      // TODO: initialize TLS server options
-      key: null,
-      cert: null,
-      passphrase: null
+      key: server_key,
+      cert: server_cert,
+      passphrase: server_key_password
     };
 
     tls_server = tls.createServer(server_options, on_connect);

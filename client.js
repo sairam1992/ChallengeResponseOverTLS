@@ -1,8 +1,16 @@
-
 var lib = require('./lib');
 var sjcl = require('./sjcl');
 
+var hex_to_bitarray = lib.hex_to_bitarray;
+var bitarray_to_hex = lib.bitarray_to_hex;
+var ECDSA_sign = lib.ECDSA_sign;
+
 var tls = require('tls');
+
+function dateDiffInDays(a, b) {
+    var _MS_PER_DAY = 1000 * 60 * 60 * 24;
+    return (b - a) / _MS_PER_DAY;
+}
 
 var client = function(client_sec_key_base64,
                       client_sec_key_password,
@@ -12,6 +20,7 @@ var client = function(client_sec_key_base64,
     var name = 'client';
   }
   var client_log = lib.log_with_prefix(name);
+  var print = console.log;
   var TYPE = lib.TYPE;
 
   var socket;
@@ -44,7 +53,38 @@ var client = function(client_sec_key_base64,
   var session_close_callback = null;
 
   function check_cert(crt) {
-    // TODO: implement the X.509 certificate checks
+      if (("valid_from" in crt)
+          && ("valid_to" in crt)
+          && ("issuer" in crt)
+          && ("subject" in crt)
+          && ("fingerprint" in crt)) {
+          var now = new Date ();
+          var from = new Date (crt.valid_from);
+          var to = new Date (crt.valid_to);
+
+          // Check whether valid currently.
+          if ((now < from) || (now > to)) {
+              protocol_abort ();
+              return false;
+          }
+          // Check if valid for next week.
+          if (dateDiffInDays (now, to) < 7) {
+              protocol_abort ();
+              return false;
+          }
+          
+          // Check if fields have valid values.
+          if ((crt.subject.C != "US")
+              || (crt.subject.ST != "CA")
+              || (crt.subject.L != "Stanford")
+              || (crt.subject.O != "CS 255")
+              || (crt.subject.OU != "Project 3")
+              || (crt.subject.CN != "localhost")
+              || (crt.subject.emailAddress != "cs255ta@cs.stanford.edu")) {
+              protocol_abort ();
+              return false;
+          }
+      }
     return true;
   }
 
@@ -57,8 +97,11 @@ var client = function(client_sec_key_base64,
           return;
         }
         protocol_state = 'CHALLENGE';
-        // TODO: respond to challenge
-        lib.send_message(socket, TYPE['RESPONSE'], 'blue');
+        var signature = ECDSA_sign (client_sec_key,
+                                    hex_to_bitarray (data.message));
+        lib.send_message(socket,
+                         TYPE['RESPONSE'],
+                         bitarray_to_hex (signature));
         break;
 
       case TYPE['SESSION_MESSAGE']:
@@ -94,10 +137,9 @@ var client = function(client_sec_key_base64,
                               session_callback_f,
                               session_close_callback_f) {
     var client_options = {
-      // TODO: Fill in options
-      ca: null,
-      host: null,
-      port: null,
+      ca: ca_cert,
+      host: host,
+      port: port,
       rejectUnauthorized: true
     };
     
@@ -125,6 +167,8 @@ var client = function(client_sec_key_base64,
         session_close_callback_f();  
       }
     });
+        
+    protocol_state = "START";
   };
 
   client.get_state = function() {
