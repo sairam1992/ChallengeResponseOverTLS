@@ -1,0 +1,77 @@
+1) 
+   The challenge - response system which we are currently using is shown 
+   below:
+
+   Challenge = l
+   Response r = Sign(csk, l)
+   Verification : Verify(cpk, l, r)
+
+   If the response was
+   r = SHA-256(l)
+   Verification : check if r = SHA-256(l),
+
+   the purpose of client authentication using challenge - response is lost. 
+   Any adversary posing as the client can respond to the challenge from 
+   the server by computing the hash of the challenge and sending it to the 
+   server. This is because there is no secret that the client uses to 
+   compute the response. 
+
+
+3) Mistakes possible in storing/loading:
+   
+   Store secret key in clear - Anyone with access to the disk can get the 
+   secret key and hence pose as the client to the server. It is evident 
+   that this method works correctly.
+
+   No salt/fixed salt - Consider the attack against weak/predictable passwords. 
+   PBKDF(password, <fixed salt>) can be pre-computed for all dictionary words. 
+   These pre-computed keys could be used one after the other trying to decrypt 
+   the stored secret key. It is trivial to see that the correctness is not 
+   affected when the salt is fixed.
+
+   In the current implementation, the 128-bit salt makes computing such a 
+   dictionary intractable. So, given every encrypted secret key, we would have 
+   to call PBKDF(guessed_password, stored_salt). Note that this cannot be 
+   pre-computed because the stored salt varies and PBKDF is slow.
+
+   Not using authenticated encryption - Tampering with the stored secret key 
+   will not be detected. Instead, the tampering will result in server not 
+   being able to authenticate client.
+
+4) Symmetric key challenge-response:
+
+a) Advantage of using symmetric-key challenge-response over public-key 
+   challenge-response is that symmetric-key challenge-response is much faster
+   than the latter.
+
+b) A disadvantage of using symmetric-key challenge-response is that the server 
+   must store the secret key for every client it is interacting with in a 
+   trusted storage and every client should store the secret key for every 
+   server it is connecting to. 
+   
+   In the public-key challenge-response system, the server stores every client's
+   public key, but it need not be stored in a trusted storage. The client 
+   however will have to store the secret keys corresponding to every server in 
+   a trusted storage.
+
+   Hence, it can be seen that the amount of trusted storage required for the 
+   servers is very high in the symmetric-key challenge-response system.
+
+5) Instead of public-key challenge response, if a password based authentication 
+   is used,
+
+a) The server should store the hash (SHA-256) of the password for every client.
+   When the client provides the password to the server, the server computes the 
+   hash of the password and verifies if the value matches with the stored hash 
+   of the password corresponding to the client.
+
+   Client ---> Password ---> Server (has a table T with hashed passwords)
+                             Computer h = SHA-256(Password)
+                             Verify if h == T[client]
+
+b) If the attacker has tricked the CA into issuing a certificate, the attacker 
+   posing as a server can get the passwords of many clients and store it. Even 
+   after the certificate for the server expires, the attacker can create a new 
+   client which does not verify the certificate issued by the server and hence 
+   connect to the server. It can now use the passwords it had collected when 
+   the certificate was valid and connect to the server.
