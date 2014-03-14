@@ -1,5 +1,12 @@
-1) 
-   The challenge - response system which we are currently using is shown 
+CS 255: Intro to Cryptography
+Programming Assignment 3
+
+Names:  Aparna Krishnan (aparnak)
+        Sujeet Gholap   (sujeet)
+
+Late days taken: 1
+
+1) The challenge - response system which we are currently using is shown 
    below:
 
    Challenge = l
@@ -17,23 +24,23 @@
    compute the response. 
 
 2) The client doesn't need to check the issuer field of the certificate as 
-   node.js takes care of that (in order to perform the trust chain CA 
-   validation) and hence, doing the issuer field check in our client is 
-   redundant.
+   node.js's TLS implementation takes care of that
+   (in order to perform the trust chain CA validation)
+   and hence, doing the issuer field check in our client is redundant.
 
-   As mentioned in the algorithm presented at
-   https://tools.ietf.org/html/rfc3280#section-6.1 , 
+   As mentioned in the algorithm presented in RFC3280, 
+   (https://tools.ietf.org/html/rfc3280#section-6.1) , 
    to validate a certificate by validating the certification path, the 
    algorithm does involve linking issuer and subject fields and validating 
-   each each certificate in the chain in succession to the root. However, 
+   each certificate in the chain in succession to the root. However, 
    in the client in this project, this chain validation is taken care of 
-   by node.js implementation.
+   by node.js's TLS layer implementation.
 
 3) Mistakes possible in storing/loading:
    
    Store secret key in clear - Anyone with access to the disk can get the 
    secret key and hence pose as the client to the server. It is evident 
-   that this method works correctly.
+   that this method works correctly, but, as just mentioned, less secure.
 
    No salt/fixed salt - Consider the attack against weak/predictable passwords. 
    PBKDF(password, <fixed salt>) can be pre-computed for all dictionary words. 
@@ -61,29 +68,33 @@ b) A disadvantage of using symmetric-key challenge-response is that the server
    trusted storage and every client should store the secret key for every 
    server it is connecting to. 
    
-   In the public-key challenge-response system, the server stores every client's
-   public key, but it need not be stored in a trusted storage. The client 
-   however will have to store the secret keys corresponding to every server in 
-   a trusted storage.
+   In the public-key challenge-response system, the server stores every
+   client's public key, but it need not be stored in a trusted storage.
 
    Hence, it can be seen that the amount of trusted storage required for the 
-   servers is very high in the symmetric-key challenge-response system.
+   servers is considerably higher in the symmetric-key challenge-response 
+   system.
 
-5) Instead of public-key challenge response, if a password based authentication 
-   is used,
+5) Instead of public-key challenge response, if a password based
+   authentication is used,
 
-a) The server should store the hash (SHA-256) of the password for every client.
-   When the client provides the password to the server, the server computes the 
-   hash of the password and verifies if the value matches with the stored hash 
-   of the password corresponding to the client.
+a) The server should store the salt||hash (SHA-256) of the password||salt
+   for every client. When the client provides the password to the server,
+   the server computes the hash of the password and verifies if the value
+   matches with the stored hash of the password corresponding to the client.
 
    Client ---> Password ---> Server (has a table T with hashed passwords)
-                             Computer h = SHA-256(Password)
-                             Verify if h == T[client]
+                             Computer h = SHA-256(Password||salt)
+                             Verify if h == T[client].strip_salt()
+
+   The server shouldn't just simply store the passwords in clear because
+   if the server is compromized, passwords fall into hands of attacker.
+
+   Not just hash because then attacker would know if two people have same
+   passwords, in addition unsalted passwords would permit meet in middle
+   attack.
 
 b) If the attacker has tricked the CA into issuing a certificate, the attacker 
    posing as a server can get the passwords of many clients and store it. Even 
-   after the certificate for the server expires, the attacker can create a new 
-   client which does not verify the certificate issued by the server and hence 
-   connect to the server. It can now use the passwords it had collected when 
-   the certificate was valid and connect to the server.
+   after the certificate for the server expires, the attacker can pose as a
+   client and communicate with the actual servers using stolen credentials.
