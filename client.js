@@ -53,39 +53,39 @@ var client = function(client_sec_key_base64,
   var session_close_callback = null;
 
   function check_cert(crt) {
-      if (("valid_from" in crt)
-          && ("valid_to" in crt)
-          && ("issuer" in crt)
-          && ("subject" in crt)
-          && ("fingerprint" in crt)) {
-          var now = new Date ();
-          var from = new Date (crt.valid_from);
-          var to = new Date (crt.valid_to);
+    if (("valid_from" in crt)
+      && ("valid_to" in crt)
+      && ("issuer" in crt)
+      && ("subject" in crt)
+      && ("fingerprint" in crt)) {
+      var now = new Date ();
+      var from = new Date (crt.valid_from);
+      var to = new Date (crt.valid_to);
 
-          // Check whether valid currently.
-          if ((now < from) || (now > to)) {
-              protocol_abort ();
-              return false;
-          }
-          // Check if valid for next week.
-          if (dateDiffInDays (now, to) < 7) {
-              protocol_abort ();
-              return false;
-          }
-          
-          // Check if fields have valid values.
-          if ((crt.subject.C != "US")
-              || (crt.subject.ST != "CA")
-              || (crt.subject.L != "Stanford")
-              || (crt.subject.O != "CS 255")
-              || (crt.subject.OU != "Project 3")
-              || (crt.subject.CN != "localhost")
-              || (crt.subject.emailAddress != "cs255ta@cs.stanford.edu")) {
-              protocol_abort ();
-              return false;
-          }
+      // Check whether valid currently.
+      if ((now < from) || (now > to)) {
+          return false;
       }
-    return true;
+      // Check if valid for next week.
+      if (dateDiffInDays (now, to) < 7) {
+          return false;
+      }
+      
+      // Check if fields have valid values.
+      if ((crt.subject.C != "US")
+          || (crt.subject.ST != "CA")
+          || (crt.subject.L != "Stanford")
+          || (crt.subject.O != "CS 255")
+          || (crt.subject.OU != "Project 3")
+          || (crt.subject.CN != "localhost")
+          || (crt.subject.emailAddress != "cs255ta@cs.stanford.edu")) {
+          return false;
+      }
+      return true;
+    }
+    else {
+      return false;
+    }
   }
 
   function process_server_msg(json_data) {
@@ -149,11 +149,15 @@ var client = function(client_sec_key_base64,
 
       if (!check_cert(socket.getPeerCertificate())) {
         client_log('bad certificate received');
-        socket.end();
+        protocol_abort ();
       }
     });
 
     socket.setEncoding('utf8');
+
+    socket.on('error', function (err) {
+      protocol_abort ();
+    });
 
     socket.on('data', function(msg) {
       process_server_msg(msg);

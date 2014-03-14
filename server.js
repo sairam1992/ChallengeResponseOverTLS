@@ -24,21 +24,9 @@ var server = function(server_key,
   var socket = null;
   var protocol_state;
     
-  var key_random_bits = null;
-  var message_random_bits = null;
+  var challenge_key = null;
+  var challenge_counter = 0;
     
-  function get_random_bits () {
-      // TODO: See if this needs to be proved.
-      if (key_random_bits == null) {
-          // 256 bits to be used as HMAC key.
-          key_random_bits = random_bitarray (256);
-          message_random_bits = random_bitarray (256);
-      }
-      message_random_bits = HMAC (key_random_bits,
-                                  message_random_bits);
-      return message_random_bits;
-  }
-
   function unwrap_client_pub_key() {
     var pair_pub_pt = sjcl.ecc.curves['c256'].fromBits(
       lib.base64_to_bitarray(client_pub_key_base64));
@@ -55,7 +43,17 @@ var server = function(server_key,
   var client_pub_key = unwrap_client_pub_key();
 
   function get_new_challenge() {
-    return bitarray_to_hex (get_random_bits ());
+      // TODO: See if this needs to be proved.
+      if (challenge_key == null) {
+          // 256 bits to be used as HMAC key.
+          challenge_key = random_bitarray (256);
+      }
+      return bitarray_to_hex (
+          HMAC (
+              challenge_key,
+              string_to_bitarray (String (challenge_counter++))
+          )
+      );
   }
 
   function process_client_msg(json_data) {
