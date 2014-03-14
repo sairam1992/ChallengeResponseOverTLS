@@ -16,6 +16,18 @@
    server. This is because there is no secret that the client uses to 
    compute the response. 
 
+2) The client doesn't need to check the issuer field of the certificate as 
+   node.js takes care of that (in order to perform the trust chain CA 
+   validation) and hence, doing the issuer field check in our client is 
+   redundant.
+
+   As mentioned in the algorithm presented at
+   https://tools.ietf.org/html/rfc3280#section-6.1 , 
+   to validate a certificate by validating the certification path, the 
+   algorithm does involve linking issuer and subject fields and validating 
+   each each certificate in the chain in succession to the root. However, 
+   in the client in this project, this chain validation is taken care of 
+   by node.js implementation.
 
 3) Mistakes possible in storing/loading:
    
