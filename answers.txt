@@ -4,7 +4,7 @@ Programming Assignment 3
 Names:  Aparna Krishnan (aparnak)
         Sujeet Gholap   (sujeet)
 
-Late days taken: 1
+Late days taken: 2
 
 1) The challenge - response system which we are currently using is shown 
    below:
@@ -23,7 +23,16 @@ Late days taken: 1
    server. This is because there is no secret that the client uses to 
    compute the response. 
 
-2) The client doesn't need to check the issuer field of the certificate as 
+2) As we have pinned the CA certificate who signed the server's certificate,
+   we don't need to see and validate the issuer field of server's
+   certificate.
+
+   Short answer: Issuer field needs to be checked to validate a path.
+                 Here, there's no need for any path as server cert is
+                 signed by one of the pinned CAs.  
+
+   General answer (if we did not have any pinned CAs):
+   The client doesn't need to check the issuer field of the certificate as 
    node.js's TLS implementation takes care of that
    (in order to perform the trust chain CA validation)
    and hence, doing the issuer field check in our client is redundant.
