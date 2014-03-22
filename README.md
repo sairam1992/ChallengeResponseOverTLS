@@ -1,4 +1,4 @@
 JsTLS
 =====
 
-A simple TLS implementation in JS for CS255
+Simple challenge-response client authentication on top of TLS
